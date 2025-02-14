@@ -152,8 +152,6 @@ def test_check_cli_with_watch() -> None:
         ) as tmpdir,
     ):
         with pushd(tmpdir):
-            filesystem.SHOULD_CLEAR_SCREEN = False
-
             stdout = ""
 
             def run_check(runner: ProxyRunner) -> None:
@@ -171,7 +169,7 @@ def test_check_cli_with_watch() -> None:
             check_thread.daemon = True  # Make thread daemon so it exits when main thread exits
             check_thread.start()
 
-            time.sleep(0.5)  # Give the check command time to start
+            time.sleep(2)  # Give the check command time to start
 
             # Copy the invalid component into the valid code location
             shutil.copy(
@@ -187,13 +185,12 @@ def test_check_cli_with_watch() -> None:
                 / "component.yaml",
             )
 
-            time.sleep(0.5)  # Give time for the watcher to detect changes
+            time.sleep(2)  # Give time for the watcher to detect changes
 
             # Signal the watcher to exit
             filesystem.SHOULD_WATCHER_EXIT = True
-            time.sleep(0.5)  # Give time for the watcher to exit
 
-            # Wait for the thread to finish
+            time.sleep(2)
             check_thread.join(timeout=1)
 
             assert "All components validated successfully" in stdout

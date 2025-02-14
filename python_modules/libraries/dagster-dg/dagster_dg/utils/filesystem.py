@@ -41,12 +41,6 @@ def hash_paths(
     return hasher.hexdigest()
 
 
-# These are global variables that are used to signal the watcher to exit in tests, and
-# to not clear the screen when running in tests.
-SHOULD_WATCHER_EXIT = False
-SHOULD_CLEAR_SCREEN = True
-
-
 class PathChangeHandler(FileSystemEventHandler):
     """Basic handler that clears the screen and re-executes the callback when any of the watched paths change
     in a way that would affect the hash of the paths. Passes the new hash to the callback.
@@ -74,11 +68,14 @@ class PathChangeHandler(FileSystemEventHandler):
             self._prev_hash = new_hash
 
     def clear_and_execute(self, new_hash: str):
-        if SHOULD_CLEAR_SCREEN:
-            clear_screen()
+        clear_screen()
         self._callback(new_hash)
         current_time = datetime.datetime.now().strftime("%H:%M:%S")
         print(f"\nUpdated at {current_time}, watching for changes...")  # noqa: T201
+
+
+# This is a global variable that is used to signal the watcher to exit in tests
+SHOULD_WATCHER_EXIT = False
 
 
 def watch_paths(
