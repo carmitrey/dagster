@@ -49,6 +49,13 @@ def resolve_local_venv(start_path: Path) -> Optional[Path]:
     return None
 
 
+def clear_screen():
+    if is_windows():
+        os.system("cls")
+    else:
+        os.system("clear")
+
+
 def get_venv_executable(venv_dir: Path, executable: str = "python") -> Path:
     if is_windows():
         return venv_dir / "Scripts" / f"{executable}.exe"
