@@ -1,3 +1,4 @@
+import datetime
 import hashlib
 import time
 from collections.abc import Sequence
@@ -9,6 +10,7 @@ from watchdog.observers import Observer
 
 from dagster_dg.utils import (
     DEFAULT_FILE_EXCLUDE_PATTERNS,
+    clear_screen,
     hash_directory_metadata,
     hash_file_metadata,
 )
@@ -58,18 +60,22 @@ class PathChangeHandler(FileSystemEventHandler):
         self._prev_hash = hash_paths(self._paths, self._includes, self._excludes)
         self.clear_and_execute(self._prev_hash)
 
-    def dispatch(self, event: FileSystemEvent):
+    def dispatch(self, _event: FileSystemEvent):
         new_hash = hash_paths(self._paths, self._includes, self._excludes)
 
         if new_hash != self._prev_hash:
             self.clear_and_execute(new_hash)
-            self._prev_hash = hash
+            self._prev_hash = new_hash
 
     def clear_and_execute(self, new_hash: str):
-        from dagster_dg.utils import clear_screen
-
         clear_screen()
         self._callback(new_hash)
+        current_time = datetime.datetime.now().strftime("%H:%M:%S")
+        print(f"\nUpdated at {current_time}, watching for changes...")  # noqa: T201
+
+
+# This is a global variable that is used to signal the watcher to exit in tests
+SHOULD_WATCHER_EXIT = False
 
 
 def watch_paths(
@@ -96,8 +102,9 @@ def watch_paths(
         observer.schedule(handler, str(path), recursive=True)
     observer.start()
     try:
-        while observer.is_alive():
-            time.sleep(1)
+        while observer.is_alive() and not SHOULD_WATCHER_EXIT:
+            time.sleep(0.5)
     except KeyboardInterrupt:
         observer.stop()
+    observer.stop()
     observer.join()
