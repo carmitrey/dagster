@@ -152,6 +152,8 @@ def test_check_cli_with_watch() -> None:
         ) as tmpdir,
     ):
         with pushd(tmpdir):
+            filesystem.SHOULD_CLEAR_SCREEN = False
+
             stdout = ""
 
             def run_check(runner: ProxyRunner) -> None:
