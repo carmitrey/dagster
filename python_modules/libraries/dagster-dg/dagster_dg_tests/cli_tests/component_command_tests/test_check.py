@@ -64,14 +64,14 @@ def create_code_location_from_components(
     runner: ProxyRunner,
     *src_paths: str,
     local_component_defn_to_inject: Optional[Path] = None,
-    skip_venv=True,
 ) -> Iterator[Path]:
     """Scaffolds a code location with the given components in a temporary directory,
     injecting the provided local component defn into each component's __init__.py.
     """
     origin_paths = [COMPONENT_INTEGRATION_TEST_DIR / src_path for src_path in src_paths]
     with isolated_example_code_location_foo_bar(
-        runner, component_dirs=origin_paths, skip_venv=skip_venv
+        runner,
+        component_dirs=origin_paths,
     ):
         for src_path in src_paths:
             components_dir = Path.cwd() / "foo_bar" / "components" / src_path.split("/")[-1]
@@ -123,7 +123,7 @@ def test_validation_cli(test_case: ComponentValidationTestCase) -> None:
         ) as tmpdir,
     ):
         with pushd(tmpdir):
-            result = runner.invoke("component", "check", "--no-use-dg-managed-environment")
+            result = runner.invoke("component", "check")
             if test_case.should_error:
                 assert result.exit_code != 0, str(result.stdout)
 
@@ -144,13 +144,11 @@ def test_check_cli_with_watch() -> None:
             runner,
             BASIC_VALID_VALUE.component_path,
             local_component_defn_to_inject=BASIC_VALID_VALUE.component_type_filepath,
-            skip_venv=False,
         ) as tmpdir_valid,
         create_code_location_from_components(
             runner,
             BASIC_INVALID_VALUE.component_path,
             local_component_defn_to_inject=BASIC_INVALID_VALUE.component_type_filepath,
-            skip_venv=False,
         ) as tmpdir,
     ):
         with pushd(tmpdir):
@@ -281,7 +279,10 @@ def test_validation_cli_local_component_cache() -> None:
         ) as code_location_dir,
     ):
         with pushd(code_location_dir):
-            result = runner.invoke("component", "check")
+            result = runner.invoke(
+                "component",
+                "check",
+            )
             assert re.search(
                 r"CACHE \[write\].*basic_component_success.*local_component_registry", result.stdout
             )
@@ -291,7 +292,10 @@ def test_validation_cli_local_component_cache() -> None:
             )
 
             # Local components should all be cached
-            result = runner.invoke("component", "check")
+            result = runner.invoke(
+                "component",
+                "check",
+            )
             assert not re.search(
                 r"CACHE \[write\].*basic_component_success.*local_component_registry", result.stdout
             )
@@ -317,7 +321,10 @@ def test_validation_cli_local_component_cache() -> None:
             ).write_text(contents + "\n")
 
             # basic_component_success local component is now be invalidated and needs to be re-cached, the other one should still be cached
-            result = runner.invoke("component", "check")
+            result = runner.invoke(
+                "component",
+                "check",
+            )
             assert re.search(
                 r"CACHE \[write\].*basic_component_success.*local_component_registry", result.stdout
             )
