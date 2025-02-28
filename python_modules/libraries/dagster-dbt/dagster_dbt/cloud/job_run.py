@@ -35,3 +35,9 @@ class DbtCloudJobRun:
         run_details = self.client.poll_run(self.run_id)
         self.status = DbtCloudJobRunStatusType(run_details["status"])
         return self.status
+
+    def get_run_results(self) -> Mapping[str, Any]:
+        return self.client.get_run_results_json(self.run_id)
+
+    def get_manifest(self) -> Mapping[str, Any]:
+        return self.client.get_run_manifest_json(self.run_id)
