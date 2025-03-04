@@ -207,7 +207,7 @@ def _add_to_python_path(path: Path) -> Iterator[None]:
 
 @dataclass
 class DefinitionsModuleCache:
-    """Context for loading an entire component hierarchy in a code location.
+    """Cache used when loading a code location's component hierarchy.
     Stores resources and a cache to ensure we don't load the same component multiple times.
     """
 
