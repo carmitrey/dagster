@@ -1,3 +1,4 @@
+import importlib
 import sys
 from pathlib import Path
 from typing import Optional
@@ -19,6 +20,7 @@ def load_test_component_defs(
     ) as code_location_dir:
         sys.path.append(str(code_location_dir))
 
-        return DefinitionsModuleCache(resources={}).build_defs_from_component_path(
-            path=Path(code_location_dir) / "my_location" / "defs" / Path(src_path).stem,
-        )
+        module_name = f"my_location.defs.{Path(src_path).stem}"
+        module = importlib.import_module(module_name)
+
+        return DefinitionsModuleCache(resources={}).build_defs_from_component_module(module)

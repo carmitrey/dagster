@@ -7,7 +7,7 @@ import inspect
 import sys
 import textwrap
 from abc import ABC, abstractmethod
-from collections.abc import Iterable, Mapping, Sequence
+from collections.abc import Iterable, Iterator, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from types import ModuleType
@@ -196,6 +196,15 @@ def get_component_types_in_module(
 T = TypeVar("T")
 
 
+@contextlib.contextmanager
+def _add_to_python_path(path: Path) -> Iterator[None]:
+    sys.path.append(path.as_posix())
+    try:
+        yield
+    finally:
+        sys.path.pop()
+
+
 @dataclass
 class DefinitionsModuleCache:
     """Context for loading an entire component hierarchy in a code location.
@@ -205,20 +214,45 @@ class DefinitionsModuleCache:
     resources: Mapping[str, object]
 
     def build_defs_from_component_path(self, path: Path) -> Definitions:
-        """Build a definitions object from a folder within the components hierarchy."""
-        return self._build_defs_from_component_path_inner(path.absolute().resolve())
+        """Loads a set of Dagster definitions from a components Python module.
+        Eventually would like to move off this entirely to use build_defs_from_component_module.
+
+        Args:
+            path (Path): The path to the components Python module.
+
+        Returns:
+            Definitions: The set of Dagster definitions loaded from the module.
+        """
+        # We need to make sure the project root is in the Python path, this isn't always the case
+        # when loading components from a path.
+        with _add_to_python_path(path.parent.parent.parent):
+            module_name = ".".join(path.parts[-3:])
+            module = importlib.import_module(module_name)
+
+        return self._build_defs_from_component_module_inner(module)
+
+    def build_defs_from_component_module(self, module: ModuleType) -> Definitions:
+        """Loads a set of Dagster definitions from a components Python module.
+
+        Args:
+            module (ModuleType): The Python module to load definitions from.
+
+        Returns:
+            Definitions: The set of Dagster definitions loaded from the module.
+        """
+        return self._build_defs_from_component_module_inner(module)
 
     @cached_method
-    def _build_defs_from_component_path_inner(self, path: Path) -> Definitions:
-        from dagster_components.core.component_decl_builder import path_to_decl_node
+    def _build_defs_from_component_module_inner(self, module: ModuleType) -> Definitions:
+        from dagster_components.core.component_decl_builder import module_to_decl_node
         from dagster_components.core.component_defs_builder import defs_from_components
 
-        decl_node = path_to_decl_node(path=path)
+        decl_node = module_to_decl_node(module)
         if not decl_node:
-            raise Exception(f"No component found at path {path}")
+            raise Exception(f"No component found at module {module}")
 
         context = ComponentLoadContext(
-            module_name=".".join(path.parts[-3:]),
+            module_name=module.__name__,
             decl_node=decl_node,
             resolution_context=ResolutionContext.default(),
             module_cache=self,
@@ -288,8 +322,12 @@ class ComponentLoadContext:
     def normalize_component_type_str(self, type_str: str) -> str:
         return f"{self.module_name}{type_str}" if type_str.startswith(".") else type_str
 
-    def build_defs_from_component_path(self, path: Path) -> Definitions:
-        return self.module_cache.build_defs_from_component_path(path)
+    def build_defs_from_component_module(self, module: ModuleType) -> Definitions:
+        """Builds the set of Dagster definitions for a component module.
+
+        This is useful for resolving dependencies on other components.
+        """
+        return self.module_cache.build_defs_from_component_module(module)
 
     def load_component_relative_python_module(self, file_path: Path) -> ModuleType:
         """Load a python module relative to the component's context path. This is useful for loading code

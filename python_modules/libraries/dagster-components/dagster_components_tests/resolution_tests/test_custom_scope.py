@@ -1,12 +1,14 @@
-from pathlib import Path
+import importlib
 
 from dagster import AssetSpec, AutomationCondition
 from dagster_components.core.component_defs_builder import DefinitionsModuleCache
 
 
 def test_custom_scope() -> None:
-    defs = DefinitionsModuleCache(resources={}).build_defs_from_component_path(
-        path=Path(__file__).parent / "custom_scope_component",
+    defs = DefinitionsModuleCache(resources={}).build_defs_from_component_module(
+        module=importlib.import_module(
+            "dagster_components_tests.resolution_tests.custom_scope_component"
+        ),
     )
 
     assets = list(defs.assets or [])
