@@ -2,7 +2,7 @@ from collections.abc import Sequence
 from typing import cast
 
 import dagster as dg
-from component_component_deps.defs import my_python_defs
+from component_component_deps.defs import my_python_defs  # type:ignore
 from dagster._core.definitions.assets import AssetsDefinition
 from dagster_components.core.component import ComponentLoadContext
 
