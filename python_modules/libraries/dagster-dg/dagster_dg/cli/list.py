@@ -1,4 +1,5 @@
 import json
+from dataclasses import asdict
 from pathlib import Path
 
 import click
@@ -9,6 +10,7 @@ from dagster_dg.cli.shared_options import dg_global_options
 from dagster_dg.component import RemoteComponentRegistry
 from dagster_dg.config import normalize_cli_config
 from dagster_dg.context import DgContext
+from dagster_dg.defs import RemoteDefinition
 from dagster_dg.utils import DgClickCommand, DgClickGroup
 
 
@@ -91,5 +93,48 @@ def component_type_list(output_json: bool, **global_options: object) -> None:
         table.add_column("Summary")
         for key in sorted(registry.keys(), key=lambda k: k.to_typename()):
             table.add_row(key.to_typename(), registry.get(key).summary)
+        console = Console()
+        console.print(table)
+
+
+# ########################
+# ##### DEFS
+# ########################
+
+
+@list_group.command(name="defs", cls=DgClickCommand)
+@click.option(
+    "--json",
+    "output_json",
+    is_flag=True,
+    default=False,
+    help="Output as JSON instead of a table.",
+)
+@dg_global_options
+def list_defs_command(output_json: bool, **global_options: object) -> None:
+    """List registered Dagster components in the current project environment."""
+    cli_config = normalize_cli_config(global_options, click.get_current_context())
+    dg_context = DgContext.for_project_environment(Path.cwd(), cli_config)
+
+    result = dg_context.external_components_command(
+        ["list", "definitions", "-m", dg_context.code_location_target_module_name]
+    )
+    definitions = sorted(
+        [RemoteDefinition(**x) for x in json.loads(result)], key=lambda defn: (defn.type, defn.name)
+    )
+
+    # JSON
+    if output_json:  # pass it straight through
+        json_output = [asdict(defn) for defn in definitions]
+        click.echo(json.dumps(json_output, indent=4))
+
+    # TABLE
+    else:
+        table = Table(border_style="dim")
+        table.add_column("Type", style="bold cyan", no_wrap=True)
+        table.add_column("Name")
+
+        for defn in definitions:
+            table.add_row(defn.type, defn.name)
         console = Console()
         console.print(table)
